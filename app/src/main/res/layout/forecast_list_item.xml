@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="?android:attr/listPreferredItemHeight"
+    android:paddingBottom="12dp"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:paddingTop="12dp">
+
+    <ImageView
+        android:id="@+id/weather_icon"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        tools:src="@drawable/art_clouds"/>
+
+
+    <TextView
+        android:textColor="#f00"
+        android:id="@+id/date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="Today, April 03"
+        android:textSize="18dp"
+        android:layout_toRightOf="@+id/weather_icon"/>
+
+    <TextView
+        android:id="@+id/weather_description"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="Rainy"
+        android:textSize="18sp"
+        android:layout_toRightOf="@+id/weather_icon"
+        android:layout_below="@+id/date"/>
+
+    <TextView
+        android:id="@+id/high_temperature"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toLeftOf="@+id/low_temperature"
+        android:layout_marginRight="8dp"
+        android:layout_centerVertical="true"
+        android:textSize="28sp"
+        tools:text="19\u00b0"/>
+
+    <TextView
+        android:id="@+id/low_temperature"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:textSize="28sp"
+        tools:text="10\u00b0"/>
+
+
+</RelativeLayout>
+
+

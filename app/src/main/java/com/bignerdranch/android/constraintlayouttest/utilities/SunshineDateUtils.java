@@ -1,0 +1,280 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.bignerdranch.android.constraintlayouttest.utilities;
+
+import android.content.Context;
+import android.text.format.DateUtils;
+import android.util.Log;
+
+
+import com.bignerdranch.android.constraintlayouttest.R;
+
+import java.text.SimpleDateFormat;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * 处理日期的类
+ * Class for handling date conversions that are useful for Sunshine.
+ */
+public final class SunshineDateUtils {
+
+    private static final String TAG = "SunshineDateUtils";
+
+    public static final long SECOND_IN_MILLIS = 1000;//1000毫秒=1秒
+    public static final long MINUTE_IN_MILLIS = SECOND_IN_MILLIS * 60;//1分钟
+    public static final long HOUR_IN_MILLIS = MINUTE_IN_MILLIS * 60;//1小时
+    public static final long DAY_IN_MILLIS = HOUR_IN_MILLIS * 24;//1天
+
+
+    /**
+     * @return 当前时间毫秒数
+     */
+    public static long getNormalizedUtcDateForToday() {
+
+        /*
+         * This number represents the number of milliseconds that have elapsed since January
+         * 1st, 1970 at midnight in the GMT time zone.
+         * 获得的是自1970-1-01 00:00:00.000 到当前时刻的时间距离,类型为long
+         */
+        long utcNowMillis = System.currentTimeMillis();
+
+        //1493357412811
+
+        /*
+         * This TimeZone represents the device's current time zone. It provides us with a means
+         * of acquiring the offset for local time from a UTC time stamp.
+         * 获取当前所在时区
+         */
+        TimeZone currentTimeZone = TimeZone.getDefault();
+        //:libcore.util.ZoneInfo
+        // [id="Asia/Shanghai",mRawOffset=28800000,
+        // mEarliestRawOffset=28800000,mUseDst=false,mDstSavings=3600000,transitions=16]
+
+
+        /*
+         * The getOffset method returns the number of milliseconds to add to UTC time to get the
+         * elapsed time since the epoch for our current time zone. We pass the current UTC time
+         * into this method so it can determine changes to account for daylight savings time.
+         * 返回格林威治时间和本地时间之间的时差
+         */
+        long gmtOffsetMillis = currentTimeZone.getOffset(utcNowMillis);
+        //gmtOffsetMillis=:28800000
+
+        /*
+         * UTC time is measured in milliseconds from January 1, 1970 at midnight from the GMT
+         * time zone. Depending on your time zone, the time since January 1, 1970 at midnight (GMT)
+         * will be greater or smaller. This variable represents the number of milliseconds since
+         * January 1, 1970 (GMT) time.
+         */
+        long timeSinceEpochLocalTimeMillis = utcNowMillis + gmtOffsetMillis;
+        //Log.i(TAG, "timeSinceEpochLocalTimeMillis=:" + timeSinceEpochLocalTimeMillis);
+        //timeSinceEpochLocalTimeMillis=:1493386212811
+
+        /* This method simply converts milliseconds to days, disregarding any fractional days */
+        /*毫秒转换成天数*/
+        long daysSinceEpochLocal = TimeUnit.MILLISECONDS.toDays(timeSinceEpochLocalTimeMillis);
+        //Log.i(TAG, "daysSinceEpochLocal=:" + daysSinceEpochLocal);
+        //daysSinceEpochLocal=:17284天
+        /*
+         * Finally, we convert back to milliseconds. This time stamp represents today's date at
+         * midnight in GMT time. We will need to account for local time zone offsets when
+         * extracting this information from the database.
+         * 转换成毫秒
+         */
+        long normalizedUtcMidnightMillis = TimeUnit.DAYS.toMillis(daysSinceEpochLocal);
+        //Log.i(TAG, "normalizedUtcMidnightMillis=:" + normalizedUtcMidnightMillis);
+        //normalizedUtcMidnightMillis=:1493337600000
+        //返回当地时间的毫秒数
+        return normalizedUtcMidnightMillis;
+    }
+
+    /**
+     * This method returns the number of days since the epoch (January 01, 1970, 12:00 Midnight UTC)
+     * in UTC time from the current date.
+     *
+     * @param date A date in milliseconds in local time.
+     *
+     * @return The number of days in UTC time from the epoch.
+     */
+    public static long getDayNumber(long date) {
+        TimeZone tz = TimeZone.getDefault();
+        long gmtOffset = tz.getOffset(date);
+        return (date + gmtOffset) / DAY_IN_MILLIS;
+    }
+
+    /**
+     * To make it easy to query for the exact date, we normalize all dates that go into
+     * the database to the start of the day in UTC time.
+     *
+     * @param date The UTC date to normalize
+     *
+     * @return The UTC date at 12 midnight
+     */
+    public static long normalizeDate(long date) {
+        // Normalize the start date to the beginning of the (UTC) day in local time
+        long retValNew = date / DAY_IN_MILLIS * DAY_IN_MILLIS;
+        return retValNew;
+    }
+
+    /**
+     * Since all dates from the database are in UTC, we must convert the given date
+     * (in UTC timezone) to the date in the local timezone. Ths function performs that conversion
+     * using the TimeZone offset.
+     *
+     * @param utcDate The UTC datetime to convert to a local datetime, in milliseconds.
+     * @return The local date (the UTC datetime - the TimeZone offset) in milliseconds.
+     */
+    public static long getLocalDateFromUTC(long utcDate) {
+        TimeZone tz = TimeZone.getDefault();
+        long gmtOffset = tz.getOffset(utcDate);
+        return utcDate - gmtOffset;
+    }
+
+    /**
+     * Since all dates from the database are in UTC, we must convert the local date to the date in
+     * UTC time. This function performs that conversion using the TimeZone offset.
+     *
+     * @param localDate The local datetime to convert to a UTC datetime, in milliseconds.
+     * @return The UTC date (the local datetime + the TimeZone offset) in milliseconds.
+     */
+    public static long getUTCDateFromLocal(long localDate) {
+        TimeZone tz = TimeZone.getDefault();
+        long gmtOffset = tz.getOffset(localDate);
+        return localDate + gmtOffset;
+    }
+
+    /**
+     * Helper method to convert the database representation of the date into something to display
+     * to users.  As classy and polished a user experience as "20140102" is, we can do better.
+     * <p/>
+     * The day string for forecast uses the following logic:
+     * For today: "Today, June 8"
+     * For tomorrow:  "Tomorrow"
+     * For the next 5 days: "Wednesday" (just the day name)
+     * For all days after that: "Mon, Jun 8" (Mon, 8 Jun in UK, for example)
+     *
+     * @param context      Context to use for resource localization
+     * @param dateInMillis The date in milliseconds (UTC)
+     * @param showFullDate Used to show a fuller-version of the date, which always contains either
+     *                     the day of the week, today, or tomorrow, in addition to the date.
+     *
+     * @return A user-friendly representation of the date such as "Today, June 8", "Tomorrow",
+     * or "Friday"
+     */
+    public static String getFriendlyDateString(Context context, long dateInMillis, boolean showFullDate) {
+
+        long localDate = getLocalDateFromUTC(dateInMillis);
+        long dayNumber = getDayNumber(localDate);//天数
+        long currentDayNumber = getDayNumber(System.currentTimeMillis());
+        //今天
+        if (dayNumber == currentDayNumber || showFullDate) {
+            Log.i(TAG, "dayNumber=" + dayNumber + "; currentDayNumber=" + currentDayNumber);
+            Log.i(TAG, String.valueOf(showFullDate));
+            /*
+             * If the date we're building the String for is today's date, the format
+             * is "Today, June 24"
+             */
+            String dayName = getDayName(context, localDate);
+            String readableDate = getReadableDateString(context, localDate);
+            if (dayNumber - currentDayNumber < 2) {
+
+                Log.i(TAG, String.valueOf(dayNumber - currentDayNumber));
+                //显示Tomorrow
+                /*
+                 * Since there is no localized format that returns "Today" or "Tomorrow" in the API
+                 * levels we have to support, we take the name of the day (from SimpleDateFormat)
+                 * and use it to replace the date from DateUtils. This isn't guaranteed to work,
+                 * but our testing so far has been conclusively positive.
+                 *
+                 * For information on a simpler API to use (on API > 18), please check out the
+                 * documentation on DateFormat#getBestDateTimePattern(Locale, String)
+                 * https://developer.android.com/reference/android/text/format/DateFormat.html#getBestDateTimePattern
+                 */
+                String localizedDayName = new SimpleDateFormat("EEEE").format(localDate);
+                return readableDate.replace(localizedDayName, dayName);
+            } else {
+                return readableDate;
+            }
+        } else if (dayNumber < currentDayNumber + 7) {
+            /* If the input date is less than a week in the future, just return the day name. */
+            return getDayName(context, localDate);
+        } else {
+            int flags = DateUtils.FORMAT_SHOW_DATE
+                    | DateUtils.FORMAT_NO_YEAR
+                    | DateUtils.FORMAT_ABBREV_ALL
+                    | DateUtils.FORMAT_SHOW_WEEKDAY;
+
+            return DateUtils.formatDateTime(context, localDate, flags);
+        }
+    }
+
+    /**
+     * Returns a date string in the format specified, which shows a date, without a year,
+     * abbreviated, showing the full weekday.
+     *
+     * @param context      Used by DateUtils to formate the date in the current locale
+     * @param timeInMillis Time in milliseconds since the epoch (local time)
+     *
+     * @return The formatted date string
+     */
+    private static String getReadableDateString(Context context, long timeInMillis) {
+        int flags = DateUtils.FORMAT_SHOW_DATE
+                | DateUtils.FORMAT_NO_YEAR
+                | DateUtils.FORMAT_SHOW_WEEKDAY;
+
+        return DateUtils.formatDateTime(context, timeInMillis, flags);
+    }
+
+    /**
+     * Given a day, returns just the name to use for that day.
+     *   E.g "today", "tomorrow", "Wednesday".
+     *
+     * @param context      Context to use for resource localization
+     * @param dateInMillis The date in milliseconds (local time)
+     *
+     * @return the string day of the week
+     */
+    private static String getDayName(Context context, long dateInMillis) {
+        /*
+         * If the date is today, return the localized version of "Today" instead of the actual
+         * day name.
+         */
+        long dayNumber = getDayNumber(dateInMillis);
+        long currentDayNumber = getDayNumber(System.currentTimeMillis());
+        if (dayNumber == currentDayNumber) {
+            return context.getString(R.string.today);
+        } else if (dayNumber == currentDayNumber + 1) {
+            return context.getString(R.string.tomorrow);
+        } else {
+            /*
+             * Otherwise, if the day is not today, the format is just the day of the week
+             * (e.g "Wednesday")
+             */
+            SimpleDateFormat dayFormat = new SimpleDateFormat("EEEE");
+            return dayFormat.format(dateInMillis);
+        }
+    }
+
+    public static boolean isDateNormalized(long millisSinceEpoch) {
+        boolean isDateNormalized = false;
+        if (millisSinceEpoch % DAY_IN_MILLIS == 0) {
+            isDateNormalized = true;
+        }
+
+        return isDateNormalized;
+    }
+}
